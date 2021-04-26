@@ -144,6 +144,7 @@ module cv32e40x_mult_sva
   logic [32:0] shift_result_ll_lh;
   logic [33:0] shift_result_ll_lh_hl;
   logic [32:0] shift_result_ll_lh_hl_shift;
+  logic [31:0] shift_result_algorithm;
 
   assign shift_result_ll = $signed({{16{mulh_al[16]}}, mulh_al[15:0]}) * $signed({{16{mulh_bl[16]}}, mulh_bl[15:0]});
   a_shift_result_ll : // Given MUL_H, first calculation is "al * bl"
@@ -194,5 +195,12 @@ module cv32e40x_mult_sva
                      (mulh_state == AHBH) |->
                      (mulh_acc == shift_result_ll_lh_hl_shift))
       else `uvm_error("mult", "MUL_H accumulated 'ah x bl' wrong")
+
+  assign shift_result_algorithm = shift_result_ll_lh_hl_shift + shift_result_hh;
+  a_shift_result_algorithm: // When results are done, output should agree with the shift-and-add algorithm
+    assert property (@(posedge clk) disable iff (!rst_n)
+                     (mulh_result_valid) |->
+                     (result_o == shift_result_algorithm))
+      else `uvm_error("mult", "MUL_H result not following 4-step algorithm")
 
 endmodule // cv32e40x_mult
