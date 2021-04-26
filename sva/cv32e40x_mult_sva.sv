@@ -144,7 +144,6 @@ module cv32e40x_mult_sva
   logic [32:0] shift_result_ll_lh;
   logic [33:0] shift_result_ll_lh_hl;
   logic [32:0] shift_result_ll_lh_hl_shift;
-  logic [31:0] shift_result_algorithm;
 
   assign shift_result_ll = $signed({{16{mulh_al[16]}}, mulh_al[15:0]}) * $signed({{16{mulh_bl[16]}}, mulh_bl[15:0]});
   a_shift_result_ll : // Given MUL_H, first calculation is "al * bl"
@@ -196,11 +195,34 @@ module cv32e40x_mult_sva
                      (mulh_acc == shift_result_ll_lh_hl_shift))
       else `uvm_error("mult", "MUL_H accumulated 'ah x bl' wrong")
 
-  assign shift_result_algorithm = shift_result_ll_lh_hl_shift + shift_result_hh;
-  a_shift_result_algorithm: // When results are done, output should agree with the shift-and-add algorithm
+
+  // Check final results of the 4-step shift-and-add algorithm
+
+  logic [31:0] algorithm_result;
+
+  assign algorithm_result = shift_result_ll_lh_hl_shift + shift_result_hh;
+  a_algorithm_result: // When results are done, output should agree with the shift-and-add algorithm
     assert property (@(posedge clk) disable iff (!rst_n)
                      (mulh_result_valid) |->
-                     (result_o == shift_result_algorithm))
+                     (result_o == algorithm_result))
       else `uvm_error("mult", "MUL_H result not following 4-step algorithm")
+
+  a_mulh_algorithm_result : // check algorithm_result for MULH
+    assert property (@(posedge clk) disable iff (!rst_n)
+                     (mulh_result_valid && (short_signed_i == 2'b11)) |->
+                     (algorithm_result == mulh_result))
+      else `uvm_error("mult", "MULH algorithm_result check failed")
+
+  a_mulhsu_algorithm_result : // check algorithm_result for MULHSU
+    assert property (@(posedge clk) disable iff (!rst_n)
+                     (mulh_result_valid && (short_signed_i == 2'b01)) |->
+                     (algorithm_result == mulhsu_result))
+      else `uvm_error("mult", "MULHSU algorithm_result check failed")
+
+  a_mulhu_algorithm_result : // check algorithm_result for MULHU
+    assert property (@(posedge clk) disable iff (!rst_n)
+                     (mulh_result_valid && (short_signed_i == 2'b00)) |->
+                     (algorithm_result == mulhu_result))
+      else `uvm_error("mult", "MULHU algorithm_result check failed")
 
 endmodule // cv32e40x_mult
