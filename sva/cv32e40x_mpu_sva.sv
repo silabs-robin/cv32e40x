@@ -61,6 +61,8 @@ module cv32e40x_mpu_sva import cv32e40x_pkg::*; import uvm_pkg::*;
    
    input logic        core_resp_valid_o,
 
+   input logic  [1:0] lsu_type,
+
    input              mpu_status_e mpu_status,
    input logic        mpu_err_trans_valid,
    input logic        mpu_block_core,
@@ -165,6 +167,7 @@ module cv32e40x_mpu_sva import cv32e40x_pkg::*; import uvm_pkg::*;
   // RTL vs SVA expectations
   pma_region_t pma_expected_cfg;
   logic        pma_expected_err;
+  logic        misaligned;
   always_comb begin
     pma_expected_cfg = NO_PMA_R_DEFAULT;
     if (PMA_NUM_REGIONS > 0) begin
@@ -174,6 +177,9 @@ module cv32e40x_mpu_sva import cv32e40x_pkg::*; import uvm_pkg::*;
   assign pma_expected_err = ((execute_access || speculative_access) && !pma_expected_cfg.main) ||
                             (misaligned_access_i && !pma_expected_cfg.main)                    ||
                             (atomic_access_i && !pma_expected_cfg.atomic);
+  assign misaligned =
+    ((lsu_type == 'b 10) && (obi_addr[1:0] != 0))
+    || ((lsu_type == 'b 01) && (obi_addr[0] != 0));
   a_pma_expect_cfg :
     assert property (@(posedge clk) disable iff (!rst_n) pma_cfg == pma_expected_cfg)
       else `uvm_error("mpu", "RTL cfg don't match SVA expectations")
@@ -186,6 +192,9 @@ module cv32e40x_mpu_sva import cv32e40x_pkg::*; import uvm_pkg::*;
   a_pma_expect_err :
     assert property (@(posedge clk) disable iff (!rst_n) pma_err == pma_expected_err)
       else `uvm_error("mpu", "expected different err flag")
+  a_pma_expect_misaligned :
+    assert property (@(posedge clk) disable iff (!rst_n) misaligned == misaligned_access_i)
+      else `uvm_error("mpu", "expected different misaligned flag")
 
   // Bufferable
   logic obibuf_expected;

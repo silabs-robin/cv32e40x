@@ -231,6 +231,7 @@ bind cv32e40x_sleep_unit:
              .obi_addr   (core_i.instr_addr_o),
              .obi_req    (core_i.instr_req_o),
              .obi_gnt    (core_i.instr_gnt_i),
+             .lsu_type   (core_i.id_ex_pipe.lsu_type),
              .*);
 
   bind cv32e40x_mpu:
@@ -245,6 +246,7 @@ bind cv32e40x_sleep_unit:
              .obi_addr   (core_i.data_addr_o),
              .obi_req    (core_i.data_req_o),
              .obi_gnt    (core_i.data_gnt_i),
+             .lsu_type   (core_i.id_ex_pipe.lsu_type),
              .*);
 `endif //  `ifndef COREV_ASSERT_OFF
   
